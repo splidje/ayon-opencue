@@ -1,10 +1,19 @@
-"""Settings for the addon."""
-from typing import Any
+from ayon_server.settings import BaseSettingsModel, SettingsField
 
-from ayon_server.settings import BaseSettingsModel
+DEFAULT_VALUES = dict(
+    cuebot_hosts="",
+    rqd_os="Linux",
+)
 
-DEFAULT_VALUES: dict[str, Any] = {}
 
-
-class MySettings(BaseSettingsModel):
-    """Settings for the addon."""
+class OpenCueSettings(BaseSettingsModel):
+    cuebot_hosts: str = SettingsField(
+        "",
+        title="Cuebot Hosts",
+        description="Comma-separated hostname / IP addresses for Cuebot hosts.",
+    )
+    rqd_os: str = SettingsField(
+        "Linux",
+        title="RQD OS",
+        description="The OS running on the Opencue render nodes.",
+    )
