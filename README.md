@@ -1,5 +1,5 @@
 # AYON OpenCue Addon
-Submits jobs to OpenCue
+Submits jobs to OpenCue: https://docs.opencue.io/
 
 Necessary PRs:
 - https://github.com/ynput/ayon-core/pull/1751
