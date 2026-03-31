@@ -1,19 +1,19 @@
 from ayon_server.settings import BaseSettingsModel, SettingsField
 
 DEFAULT_VALUES = dict(
-    cuebot_hosts="",
     rqd_os="Linux",
+    show_name="",
 )
 
 
 class OpenCueSettings(BaseSettingsModel):
-    cuebot_hosts: str = SettingsField(
-        "",
-        title="Cuebot Hosts",
-        description="Comma-separated hostname / IP addresses for Cuebot hosts.",
-    )
     rqd_os: str = SettingsField(
         "Linux",
         title="RQD OS",
         description="The OS running on the Opencue render nodes.",
+    )
+    show_name: str = SettingsField(
+        "",
+        title="Show Name",
+        description="The name of the show under which to submit jobs.",
     )

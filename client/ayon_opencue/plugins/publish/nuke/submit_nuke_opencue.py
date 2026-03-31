@@ -1,3 +1,7 @@
+import os
+
+from pathlib import Path
+
 import pyblish.api
 
 import ayon_applications
@@ -16,15 +20,15 @@ class NukeSubmitOpenCue(
     hosts = ["nuke"]
 
     def process(self, instance):
+        if not instance.data.get("farm"):
+            self.log.debug("Should not be processed on farm, skipping.")
+            return
+
         # Opencue
         from opencue import Cuebot
 
         import outline
         import outline.modules.shell
-
-        if not instance.data.get("farm"):
-            self.log.debug("Should not be processed on farm, skipping.")
-            return
 
         application_full_name = instance.context.data["appName"]
         application_name, application_variant_name = application_full_name.split("/")
@@ -50,14 +54,14 @@ class NukeSubmitOpenCue(
 
         settings = ayon_core.settings.get_current_project_settings()["opencue"]
 
-        Cuebot.setHosts(settings["cuebot_hosts"].split(","))
         rqd_os = settings["rqd_os"]
+        show_name = settings["show_name"]
 
         # TODO: applications addons has this function: `macos_executable_prep`
         # Which discovers the true path to the executable. However,
         # if submitting machine isn't Mac OS it won't work, as it won't
         # find the .app on disk which is required.
-        nuke_executable_path = variant_settings["executables"][rqd_os.lower()]
+        nuke_executable_path = variant_settings["executables"][rqd_os.lower()][0]
 
         project_name = instance.context.data["projectName"]
         version_string = (
@@ -65,18 +69,29 @@ class NukeSubmitOpenCue(
             .templates["version"]
             .format(version=instance.context.data["version"])
         )
+        node_name = instance.data["transientData"]["node"].name()
+        output_path = Path(instance.data["path"])
         job = outline.Outline(
             f'{instance.context.data["task"]}_{version_string}_{instance.name}',
             shot=instance.context.data["folderEntity"]["name"],
-            show="testing",
+            show=show_name,
         )
         layer = outline.modules.shell.Shell(
-            "layer",
+            node_name,
             command=[
                 nuke_executable_path,
                 "-t",
+                "-X",
+                node_name,
+                "-F",
+                "#IFRAME#",
+                instance.context.data["currentFile"],
             ],
+            range=f'{instance.data["frameStartHandle"]}-{instance.data["frameEndHandle"]}',
+            tags=["general"],
         )
+        layer.set_env("AYON_PROJECT_ROOT_WORK", os.environ["AYON_PROJECT_ROOT_WORK"])
+        layer.add_output(node_name, outline.io.FileSpec(output_path))
         job.add_layer(layer)
 
-        outline.cuerun.launch(job, os=rqd_os)
+        outline.cuerun.launch(job, os=rqd_os, use_pycuerun=False)
