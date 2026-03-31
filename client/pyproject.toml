@@ -3,5 +3,5 @@ name="opencue"
 description="AYON OpenCue Addon."
 
 [tool.poetry.dependencies]
-opencue-pycue = ">=1.13.8"
-opencue-pyoutline = ">=1.13.8"
+#opencue-pycue = ">=1.13.8"
+#opencue-pyoutline = ">=1.13.8"
