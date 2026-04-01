@@ -25,16 +25,14 @@ class NukeSubmitOpenCue(
             return
 
         # Opencue
-        from opencue import Cuebot
-
         import outline
         import outline.modules.shell
 
         application_full_name = instance.context.data["appName"]
         application_name, application_variant_name = application_full_name.split("/")
-        if application_name != "nuke":
+        if application_name not in ("nuke", "nukex"):
             raise ValueError(
-                f"Expecting application name to be 'nuke', but instead it's: {application_full_name}"
+                f"Expecting application name to be 'nuke' or 'nukex', but instead it's: {application_full_name}"
             )
 
         variant_settings = next(
