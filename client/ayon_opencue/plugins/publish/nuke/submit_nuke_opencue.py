@@ -82,11 +82,14 @@ class NukeSubmitOpenCue(
                 "-X",
                 node_name,
                 "-F",
-                "#IFRAME#",
+                "#FRAMESPEC#",
                 instance.context.data["currentFile"],
             ],
             range=f'{instance.data["frameStartHandle"]}-{instance.data["frameEndHandle"]}',
             tags=["general"],
+            limits=["nuke"],
+            memory="50G",
+            chunk=5,
         )
         layer.set_env("AYON_PROJECT_ROOT_WORK", os.environ["AYON_PROJECT_ROOT_WORK"])
         layer.add_output(node_name, outline.io.FileSpec(output_path))
