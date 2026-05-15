@@ -18,6 +18,7 @@ class NukeSubmitOpenCue(
     label = "Submit Nuke to OpenCue"
     order = pyblish.api.IntegratorOrder + 0.1
     hosts = ["nuke"]
+    families = ["render", "prerender"]
 
     def process(self, instance):
         if not instance.data.get("farm"):
@@ -91,6 +92,7 @@ class NukeSubmitOpenCue(
             memory="50G",
             chunk=5,
         )
+        layer.set_arg("gpus", int(instance.data["requires_gpu"]))
         layer.set_env("AYON_PROJECT_ROOT_WORK", os.environ["AYON_PROJECT_ROOT_WORK"])
         layer.add_output(node_name, outline.io.FileSpec(output_path))
         job.add_layer(layer)
