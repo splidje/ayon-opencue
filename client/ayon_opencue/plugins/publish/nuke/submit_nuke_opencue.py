@@ -1,3 +1,4 @@
+import json
 import os
 
 from pathlib import Path
@@ -18,7 +19,7 @@ class NukeSubmitOpenCue(
     label = "Submit Nuke to OpenCue"
     order = pyblish.api.IntegratorOrder + 0.1
     hosts = ["nuke"]
-    families = ["render", "prerender"]
+    families = ["plate", "render", "prerender"]
 
     def process(self, instance):
         if not instance.data.get("farm"):
@@ -94,6 +95,8 @@ class NukeSubmitOpenCue(
         )
         layer.set_arg("gpus", int(instance.data["requires_gpu"]))
         layer.set_env("AYON_PROJECT_ROOT_WORK", os.environ["AYON_PROJECT_ROOT_WORK"])
+        for key, value in json.loads(variant_settings["environment"]).items():
+            layer.set_env(key, value)
         layer.add_output(node_name, outline.io.FileSpec(output_path))
         job.add_layer(layer)
 

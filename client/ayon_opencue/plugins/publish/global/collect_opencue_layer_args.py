@@ -9,7 +9,7 @@ class CollectOpenCueLayerArgs(pyblish.api.InstancePlugin, AYONPyblishPluginMixin
     label = "Collect OpenCue Layer Args"
     targets = ["local"]
     hosts = ["nuke"]
-    families = ["render", "prerender"]
+    families = ["plate", "render", "prerender"]
 
     def process(self, instance):
         instance.data["requires_gpu"] = self.get_attr_values_from_data(instance.data)[
