@@ -91,7 +91,7 @@ class NukeSubmitOpenCue(
             tags=["general"],
             limits=["nuke"],
             memory="50G",
-            chunk=5,
+            chunk=instance.data["chunk_size"],
         )
         layer.set_arg("gpus", int(instance.data["requires_gpu"]))
         layer.set_env("AYON_PROJECT_ROOT_WORK", os.environ["AYON_PROJECT_ROOT_WORK"])
@@ -99,5 +99,5 @@ class NukeSubmitOpenCue(
             layer.set_env(key, value)
         layer.add_output(node_name, outline.io.FileSpec(output_path))
         job.add_layer(layer)
-
-        outline.cuerun.launch(job, os=rqd_os, use_pycuerun=False)
+        launcher = outline.cuerun.OutlineLauncher(job, os=rqd_os, priority=50, maxretries=10)
+        launcher.launch(use_pycuerun=False)
