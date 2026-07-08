@@ -8,7 +8,8 @@ import pyblish.api
 import ayon_applications
 import ayon_core
 
-from ayon_core.pipeline import Anatomy
+from ayon_core.pipeline import Anatomy, registered_host
+from ayon_core.pipeline.create import CreateContext
 from ayon_core.pipeline.publish import AYONPyblishPluginMixin
 
 
@@ -20,6 +21,11 @@ class NukeSubmitOpenCue(
     order = pyblish.api.IntegratorOrder + 0.1
     hosts = ["nuke"]
     families = ["plate", "render", "prerender"]
+
+    @classmethod
+    def register_create_context_callbacks(cls, create_context: "CreateContext"):
+        create_context.add_instances_added_callback(_on_create_instances_added)
+        create_context.add_value_changed_callback(_on_create_instance_values_changed)
 
     def process(self, instance):
         if not instance.data.get("farm"):
@@ -99,5 +105,94 @@ class NukeSubmitOpenCue(
             layer.set_env(key, value)
         layer.add_output(node_name, outline.io.FileSpec(output_path))
         job.add_layer(layer)
-        launcher = outline.cuerun.OutlineLauncher(job, os=rqd_os, priority=50, maxretries=10)
+        launcher = outline.cuerun.OutlineLauncher(
+            job, os=rqd_os, priority=50, maxretries=10
+        )
         launcher.launch(use_pycuerun=False)
+
+
+def initialise_nuke():
+    import nuke
+
+    # add callback for opencue requires gpu knob
+    nuke.addKnobChanged(_group_node_knob_changed, nodeClass="Group")
+
+
+def _on_create_instances_added(event):
+    import nuke
+
+    for instance in event["instances"]:
+        collect_opencue_layer_args = instance.publish_attributes.get(
+            "CollectOpenCueLayerArgs"
+        )
+        if (
+            not collect_opencue_layer_args
+            or "requires_gpu" not in collect_opencue_layer_args
+        ):
+            continue
+
+        node = instance.transient_data["node"]
+        if "requires_gpu" not in node.knobs():
+            requires_gpu_knob = nuke.Boolean_Knob("requires_gpu", "Requires GPU")
+            node.addKnob(requires_gpu_knob)
+            requires_gpu_knob.setFlag(nuke.STARTLINE)
+            requires_gpu_knob.setValue(collect_opencue_layer_args["requires_gpu"])
+
+        if "chunk_size" not in node.knobs():
+            chunk_size_knob = nuke.Int_Knob("chunk_size", "Chunk Size")
+            node.addKnob(chunk_size_knob)
+            chunk_size_knob.clearFlag(nuke.STARTLINE)
+            chunk_size_knob.setValue(collect_opencue_layer_args["chunk_size"])
+
+
+def _on_create_instance_values_changed(event):
+    for change in event["changes"]:
+        instance = change["instance"]
+        for name, value in (
+            change["changes"]
+            .get("publish_attributes", {})
+            .get("CollectOpenCueLayerArgs", {})
+            .items()
+        ):
+            if name not in ("requires_gpu", "chunk_size"):
+                continue
+
+            node = instance.transient_data["node"]
+            knob = node.knob(name)
+            if knob and knob.value() != value:
+                knob.setValue(value)
+
+
+def _group_node_knob_changed():
+    import nuke
+
+    from ayon_nuke.api.lib import get_node_data, INSTANCE_DATA_KNOB
+
+    knob = nuke.thisKnob()
+    knob_name = knob.name()
+
+    if knob_name not in ("requires_gpu", "chunk_size"):
+        return
+
+    instance_id = get_node_data(nuke.thisNode(), INSTANCE_DATA_KNOB).get("instance_id")
+    if not instance_id:
+        return
+
+    with nuke.Root():
+        create_context = CreateContext(registered_host())
+        instance = create_context.instances_by_id.get(instance_id)
+    if not instance:
+        return
+
+    collect_opencue_layer_args = instance.publish_attributes.get(
+        "CollectOpenCueLayerArgs"
+    )
+    if not collect_opencue_layer_args:
+        return
+
+    value = knob.value()
+    if collect_opencue_layer_args.get(knob_name) == value:
+        return
+
+    collect_opencue_layer_args[knob_name] = value
+    create_context.save_changes()
