@@ -132,6 +132,9 @@ def _on_create_instances_added(event):
             continue
 
         node = instance.transient_data["node"]
+        if "opencue_label" not in node.knobs():
+            node.addKnob(nuke.Text_Knob("opencue_label", "OpenCue"))
+
         if "requires_gpu" not in node.knobs():
             requires_gpu_knob = nuke.Boolean_Knob("requires_gpu", "Requires GPU")
             node.addKnob(requires_gpu_knob)
